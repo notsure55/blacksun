@@ -2,7 +2,7 @@ use crate::{ color::Color, Window, rect::*, Draw };
 use glium::{ Surface, uniform, Frame };
 
 pub struct FilledRect {
-    rect: Rect,
+    pub rect: Rect,
     color: Color,
 }
 
