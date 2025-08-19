@@ -1,0 +1,1 @@
+/home/black/projects/rust/blacksun/target/debug/libblacksun.rlib: /home/black/projects/rust/blacksun/src/color.rs /home/black/projects/rust/blacksun/src/filled_rect.rs /home/black/projects/rust/blacksun/src/lib.rs /home/black/projects/rust/blacksun/src/rect.rs

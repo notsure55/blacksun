@@ -1,0 +1,9 @@
+[package]
+name = "blacksun"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glium = "0.36.0"
+glutin = "0.32.3"
+winit = "0.30.12"
