@@ -1,1 +1,0 @@
-/home/black/projects/rust/blacksun/target/debug/examples/game_example: /home/black/projects/rust/blacksun/examples/game_example.rs /home/black/projects/rust/blacksun/src/color.rs /home/black/projects/rust/blacksun/src/filled_rect.rs /home/black/projects/rust/blacksun/src/lib.rs /home/black/projects/rust/blacksun/src/rect.rs
