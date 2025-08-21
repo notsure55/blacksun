@@ -1,6 +1,6 @@
 use glium::{ Frame };
-use crate::*;
-use std::cell::Cell;
+use crate::{ *, traits::*, shape::*};
+use std::cell::{ Cell, RefCell };
 use std::rc::Rc;
 
 #[derive(Default)]
@@ -14,7 +14,7 @@ pub enum Direction {
 }
 
 pub struct Label<'a> {
-    attached: Rc<dyn Draw>,
+    attached: Rc<dyn Drawable>,
     color: color::Color,
     direction: Direction,
     text: Cell<&'a str>,
@@ -23,7 +23,7 @@ pub struct Label<'a> {
 }
 
 impl<'a> Label<'a> {
-    pub fn new(attached: Rc<dyn Draw>, color: color::Color, direction: Direction, text: &'a str, scale: f32, dist_scale: f32) -> Self {
+    pub fn new(attached: Rc<dyn Drawable>, color: color::Color, direction: Direction, text: &'a str, scale: f32, dist_scale: f32) -> Self {
         Self {
             attached,
             color,
@@ -35,14 +35,26 @@ impl<'a> Label<'a> {
     }
 }
 
-impl<'a> Draw for Label<'a> {
+impl<'a> Shapeable for Label<'a>  {
+    fn get_shape(&self) -> &Shape {
+        self.attached.get_shape()
+    }
+}
+
+impl<'a> Colorable for Label<'a>  {
+    fn get_color(&self) -> &color::Color {
+        &self.color
+    }
+}
+
+impl<'a> Drawable for Label<'a> {
     fn draw(
         &self,
         window: &Window,
         frame: &mut Frame,
     ) {
         let top_left =  {
-            match self.attached.as_ref().get_shape() {
+            match self.attached.get_shape() {
                  Shape::Rect(r) => {
                     match self.direction {
                         Direction::Top => {
@@ -93,13 +105,5 @@ impl<'a> Draw for Label<'a> {
             matrix,
             self.get_color().v.into()
         ).unwrap();
-    }
-
-    fn get_color(&self) -> &color::Color {
-        &self.color
-    }
-
-    fn get_shape(&self) -> &Shape {
-        self.attached.get_shape()
     }
 }

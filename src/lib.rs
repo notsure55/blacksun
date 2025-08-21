@@ -1,19 +1,25 @@
 use glium::backend::glutin::Display;
 use glutin::surface::WindowSurface;
+use winit::keyboard::NamedKey;
 use winit::{ event_loop::EventLoop };
 use glium::implement_vertex;
 use glium::Surface;
 use std::rc::Rc;
 
+use winit::keyboard::*;
+
 use winit::event::MouseButton;
 use glium::{ uniform };
 
+pub mod button;
 pub mod rect;
-pub mod filled_rect;
 pub mod color;
 pub mod rusttype;
 pub mod label;
 pub mod circle;
+pub mod text;
+pub mod traits;
+pub mod shape;
 
 #[derive(Copy, Clone, Default)]
 pub struct Vertex {
@@ -22,105 +28,16 @@ pub struct Vertex {
 
 implement_vertex!(Vertex, p);
 
-pub enum Shape {
-    Rect(rect::Rect),
-    Circle(circle::Circle),
+struct KeyBoard {
+    input: String,
+    backspace: bool,
 }
 
-struct WindowOptions {
-
-}
-
-pub trait Draw {
-    fn get_color(&self) -> &color::Color;
-
-    fn draw(
-        &self,
-        window: &Window,
-        frame: &mut glium::Frame
-    ) {
-        let uniforms = uniform! {
-            matrix: [
-                [ 2.0 / window.size.0 as f32, 0.0, 0.0, 0.0 ],
-                [ 0.0,-2.0 / window.size.1 as f32, 0.0, 0.0 ],
-                [ 0.0, 0.0, 1.0, 0.0 ],
-                [-1.0,  1.0, 0.0, 1.0f32 ],
-            ],
-            color_input: self.get_color().v
-        };
-
-        match self.get_shape() {
-            Shape::Rect(r) => {
-                let vertexes = r.get_vertexes();
-                let vertex_buffer = glium::VertexBuffer::new(&window.display, &vertexes).unwrap();
-                let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleFan);
-
-                let vertex_shader_src = r#"
-                    #version 140
-
-                    in vec2 p;
-                    uniform mat4 matrix;
-
-                    void main() {
-                    gl_Position = matrix * vec4(p, 0.0, 1.0);
-                    }
-                    "#;
-                let fragment_shader_src = r#"
-                    #version 140
-
-                    uniform vec4 color_input;
-                    out vec4 color;
-
-                    void main() {
-                    color = color_input;
-                   }
-                   "#;
-                let program = glium::Program::from_source(&window.display, vertex_shader_src, fragment_shader_src, None).unwrap();
-
-                frame.draw(
-                    &vertex_buffer,
-                    &indices,
-                    &program,
-                    &uniforms,
-                    &Default::default()
-                ).unwrap();
-            },
-            _ => return,
-        };
-    }
-
-    fn get_shape(
-        &self
-    ) -> &Shape;
-
-    fn get_options(&self) -> &WindowOptions;
-
-    fn in_bounds(&self, window: &Window) -> bool {
-        match self.get_shape() {
-            Shape::Rect(r) => {
-                let size = r.get_size();
-                let top_left = r.get_top_left();
-
-                if window.mouse_pos.0 < top_left.p[0] + size.0 && window.mouse_pos.0 > top_left.p[0]
-                && window.mouse_pos.1 < top_left.p[1] + size.1 && window.mouse_pos.1 > top_left.p[1] {
-                    true
-                } else {
-                    false
-                }
-            },
-            _ => false,
-        }
-    }
-
-    fn clicked(
-        &self,
-        window: &Window
-    ) -> bool {
-        if self.in_bounds(window) && window.clicked {
-            println!("clicked!");
-            true
-        } else {
-            false
+impl KeyBoard {
+    fn new() -> Self {
+        Self {
+            input: String::new(),
+            backspace: false,
         }
     }
 }
@@ -131,9 +48,10 @@ pub struct Window {
     size: (u32, u32),
     font: rusttype::FontTexture,
     text_system: rusttype::TextSystem,
-    objects: Vec<Rc<dyn Draw>>,
+    objects: Vec<Rc<dyn traits::Drawable>>,
     mouse_pos: (f32, f32),
-    clicked: bool
+    clicked: bool,
+    keyboard: KeyBoard
 }
 
 impl Window {
@@ -164,7 +82,8 @@ impl Window {
             text_system,
             objects: Vec::new(),
             mouse_pos: (0.0, 0.0),
-            clicked: false
+            clicked: false,
+            keyboard: KeyBoard::new(),
         } , event_loop)
     }
 
@@ -178,12 +97,14 @@ impl Window {
         let mut objects = std::mem::take(&mut self.objects);
 
         objects.iter().for_each(|object| {
-            object.as_ref().draw(self, &mut frame);
-            object.as_ref().clicked(self);
+            object.draw(self, &mut frame);
+            object.clicked(self);
+            object.selected(self);
         });
 
         // reset clicked
         self.clicked = false;
+        self.clear_keyboard();
         self.objects = std::mem::take(&mut objects);
 
         frame.finish().unwrap();
@@ -198,6 +119,27 @@ impl Window {
                     glium::winit::event::WindowEvent::CloseRequested => window_target.exit(),
                     glium::winit::event::WindowEvent::CursorMoved { position, .. } => {
                         self.mouse_pos = (position.x as f32, position.y as f32);
+                    },
+                    glium::winit::event::WindowEvent::KeyboardInput { event, .. } => {
+                        if event.state.is_pressed() {
+                            match event.logical_key {
+                                Key::Named(n) => {
+                                    match n {
+                                        NamedKey::Backspace => {
+                                            self.keyboard.backspace = true
+                                        },
+                                        NamedKey::Space => {
+                                            self.keyboard.input.push(' ');
+                                        },
+                                        _ => (),
+                                    }
+                                },
+                                Key::Character(c) => {
+                                    self.keyboard.input.push_str(c.as_str())
+                                }
+                                _ => (),
+                            }
+                        }
                     },
                     glium::winit::event::WindowEvent::MouseInput { state, button, .. } => {
                         if state.is_pressed() && button == MouseButton::Left {
@@ -217,8 +159,16 @@ impl Window {
         })
         .unwrap();
     }
+    pub fn get_keyboard(&self) -> &KeyBoard {
+        &self.keyboard
+    }
 
-    pub fn add_to_draw_list(&mut self, object: Rc<dyn Draw>) {
+    pub fn clear_keyboard(&mut self) {
+        self.keyboard.input = String::new();
+        self.keyboard.backspace = false;
+    }
+
+    pub fn add_to_draw_list(&mut self, object: Rc<dyn traits::Drawable>) {
         self.objects.push(object);
     }
 }
