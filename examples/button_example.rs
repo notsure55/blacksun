@@ -2,6 +2,14 @@ use blacksun::*;
 use std::io;
 use std::rc::Rc;
 
+struct Button {
+
+}
+
+impl Draw for Button {
+
+}
+
 fn main() -> Result<(), io::Error> {
     let (mut main_window, event_loop) = blacksun::Window::new();
 
@@ -13,10 +21,10 @@ fn main() -> Result<(), io::Error> {
     let label: Rc<dyn Draw> = Rc::new(label::Label::new(
         Rc::clone(&object),
         color::Color::new(255, 0, 255, 255),
-        label::Direction::Inside,
+        label::Direction::Top,
         "Hello!",
         30.0,
-        0.0
+        0.3
     ));
 
     main_window.add_to_draw_list(object);

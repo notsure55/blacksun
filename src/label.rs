@@ -10,10 +10,11 @@ pub enum Direction {
     Left,
     Right,
     Bottom,
+    Inside,
 }
 
 pub struct Label<'a> {
-    attached: Rc<Object<'a>>,
+    attached: Rc<dyn Draw>,
     color: color::Color,
     direction: Direction,
     text: Cell<&'a str>,
@@ -22,7 +23,7 @@ pub struct Label<'a> {
 }
 
 impl<'a> Label<'a> {
-    pub fn new(attached: Rc<Object<'a>>, color: color::Color, direction: Direction, text: &'a str, scale: f32, dist_scale: f32) -> Self {
+    pub fn new(attached: Rc<dyn Draw>, color: color::Color, direction: Direction, text: &'a str, scale: f32, dist_scale: f32) -> Self {
         Self {
             attached,
             color,
@@ -41,24 +42,28 @@ impl<'a> Draw for Label<'a> {
         frame: &mut Frame,
     ) {
         let top_left =  {
-            match self.attached.as_ref() {
-                Object::FilledRect(o) => {
+            match self.attached.as_ref().get_shape() {
+                 Shape::Rect(r) => {
                     match self.direction {
                         Direction::Top => {
-                            Vertex { p: [ o.rect.top_left.p[0],
-                                          o.rect.top_left.p[1] - o.rect.height * self.dist_scale] }
+                            Vertex { p: [ r.top_left.p[0],
+                                          r.top_left.p[1] - r.height * self.dist_scale] }
                         },
                         Direction::Left => {
-                            Vertex { p: [ o.rect.top_left.p[0] - o.rect.width,
-                                          o.rect.top_left.p[1] + o.rect.height * self.dist_scale ] }
+                            Vertex { p: [ r.top_left.p[0] - r.width,
+                                          r.top_left.p[1] + r.height * self.dist_scale ] }
                         },
                         Direction::Right => {
-                            Vertex { p: [ o.rect.top_left.p[0] + o.rect.width,
-                                          o.rect.top_left.p[1] + o.rect.height * self.dist_scale ] }
+                            Vertex { p: [ r.top_left.p[0] + r.width,
+                                          r.top_left.p[1] + r.height * self.dist_scale ] }
                         },
                         Direction::Bottom => {
-                            Vertex { p: [ o.rect.top_left.p[0],
-                                          o.rect.top_left.p[1] + o.rect.height * (self.dist_scale + 1.0) ] }
+                            Vertex { p: [ r.top_left.p[0],
+                                          r.top_left.p[1] + r.height * (self.dist_scale + 1.0) ] }
+                        },
+                        Direction::Inside => {
+                            Vertex { p: [ r.top_left.p[0] + r.width * (self.dist_scale),
+                                          r.top_left.p[1] + r.height / 2.0  ] }
                         },
                     }
                 },
@@ -86,7 +91,15 @@ impl<'a> Draw for Label<'a> {
             &window.text_system,
             frame,
             matrix,
-            self.color.v.into()
+            self.get_color().v.into()
         ).unwrap();
+    }
+
+    fn get_color(&self) -> &color::Color {
+        &self.color
+    }
+
+    fn get_shape(&self) -> &Shape {
+        self.attached.get_shape()
     }
 }
