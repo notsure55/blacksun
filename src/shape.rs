@@ -1,6 +1,7 @@
 use crate::*;
 use crate::traits::*;
 
+#[derive(Copy, Clone)]
 pub enum Shape {
     Rect(rect::Rect),
     Circle(circle::Circle),

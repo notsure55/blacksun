@@ -20,6 +20,7 @@ pub mod circle;
 pub mod text;
 pub mod traits;
 pub mod shape;
+pub mod grid;
 
 #[derive(Copy, Clone, Default)]
 pub struct Vertex {

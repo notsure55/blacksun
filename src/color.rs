@@ -1,3 +1,4 @@
+#[derive(Default, Copy, Clone)]
 pub struct Color {
     pub v: [f32; 4]
 }

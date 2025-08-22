@@ -1,5 +1,6 @@
 use crate::*;
 
+#[derive(Default, Copy, Clone)]
 pub struct Rect {
     pub top_left: Vertex,
     pub width: f32,

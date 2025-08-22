@@ -1,5 +1,6 @@
 use crate::*;
 
+#[derive(Copy, Clone)]
 pub struct Circle {
     point: Vertex,
     radius: f32,
